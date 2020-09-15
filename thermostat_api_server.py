@@ -108,7 +108,7 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
                     children = root.getchildren()
                     for child in root.iter():
                        thermostat_message[child.tag] = child.text
-                    client.publish(thermostat_state_topic, str(thermostat_message).replace("'",'"').replace("None",'""'))
+                    client.publish(thermostat_state_topic, str(thermostat_message).replace("'",'"').replace("None",'""'), retain=True)
 
 
         if changes_pending == True and "/status" in self.path:
