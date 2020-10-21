@@ -11,7 +11,6 @@ import datetime
 import os
 import socketserver
 import time
-import threading
 
 # Allow faster script restart
 socketserver.TCPServer.allow_reuse_address = True
@@ -71,6 +70,8 @@ def on_message(client, userdata, message):
 
 
 class MyHttpRequestHandler(BaseHTTPRequestHandler):
+    protocol_version = 'HTTP/1.1'
+
     def send_no_changes(self):
         html = f'''<status version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/status"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><pingRate>0</pingRate><dealerConfigPingRate>0</dealerConfigPingRate><weatherPingRate>14400</weatherPingRate><equipEventsPingRate>0</equipEventsPingRate><historyPingRate>0</historyPingRate><iduFaultsPingRate>0</iduFaultsPingRate><iduStatusPingRate>86400</iduStatusPingRate><oduFaultsPingRate>0</oduFaultsPingRate><oduStatusPingRate>0</oduStatusPingRate><configHasChanges>off</configHasChanges><dealerConfigHasChanges>off</dealerConfigHasChanges><dealerHasChanges>off</dealerHasChanges><oduConfigHasChanges>off</oduConfigHasChanges><iduConfigHasChanges>off</iduConfigHasChanges><utilityEventsHasChanges>off</utilityEventsHasChanges></status>'''
         self.send_response(200)
@@ -80,6 +81,11 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(bytes(html, "utf8"))
 
+    def send_empty_200(self):
+        print("** empty **")
+        self.send_response(200)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_GET(self):
         html = ""
@@ -89,7 +95,6 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Length", "5")
             self.send_header("Content-Type", "text/plain; charset=utf-8")
-            self.send_header("Connection", "keep-alive")
             self.end_headers()
             self.wfile.write(bytes(html, "utf8"))
 
@@ -98,7 +103,6 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
             html = f'''<time version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/time/"/><utc>{time}</utc></time>'''
             self.send_response(200)
             self.send_header("Content-Length", len(html))
-            self.send_header("Connection", "keep-alive")
             self.send_header("Content-Type", "application/xml; charset=utf-8")
             self.end_headers()
             self.wfile.write(bytes(html, "utf8"))
@@ -110,29 +114,23 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Length", len(html))
             self.send_header("Content-Type", "application/xml; charset=utf-8")
-            self.send_header("Connection", "keep-alive")
             self.end_headers()
             self.wfile.write(bytes(html, "utf8"))
 
         else:
             # Send 0 length 200 response
-            self.send_response(200)
-            self.send_header("Connection", "keep-alive")
-            self.send_header("Content-Length", "0")
-            self.end_headers()
+            self.send_empty_200()
 
 
     def do_POST(self):
-        length = int(self.headers.get('Content-length', 0))
-        data = self.rfile.read(length).decode()
+        print()
+        data = self.rfile.read(int(self.headers.get('Content-length'))).decode("utf-8")
+        print("data unparsed: {}".format(data))
         data = unquote(data).strip("data=")
+        print("data parsed: {}".format(data))
         global current_configuration
         global candidate_configuration
         global first_start
-
-        # DEBUG
-        print()
-        print("data: {}".format(data))
 
         html = ""
         match = False
@@ -155,10 +153,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                     if "/status" in self.path:
                         self.send_no_changes()
                     else:
-                        self.send_response(200)
-                        self.send_header("Connection", "keep-alive")
-                        self.send_header("Content-Length", "0")
-                        self.end_headers()
+                        self.send_empty_200
                     return
 
                 children = list(root)
@@ -168,20 +163,14 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
             # ignore other paths
             else:
                 # Send 0 length 200 response
-                self.send_response(200)
-                self.send_header("Connection", "keep-alive")
-                self.send_header("Content-Length", "0")
-                self.end_headers()
+                self.send_empty_200()
                 return
 
             if "/odu_status" in self.path or "/status" in self.path:
 
                 # We don't need any kind of response for this path
                 if "/odu_status" in self.path:
-                    self.send_response(200)
-                    self.send_header("Connection", "keep-alive")
-                    self.send_header("Content-Length", "0")
-                    self.end_headers()
+                    self.send_empty_200()
 
                 for option in monitored:
                     if option in received_message:
@@ -205,7 +194,6 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                     html = f'''<status version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/status"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><pingRate>0</pingRate><dealerConfigPingRate>0</dealerConfigPingRate><weatherPingRate>14400</weatherPingRate><equipEventsPingRate>0</equipEventsPingRate><historyPingRate>0</historyPingRate><iduFaultsPingRate>0</iduFaultsPingRate><iduStatusPingRate>86400</iduStatusPingRate><oduFaultsPingRate>0</oduFaultsPingRate><oduStatusPingRate>0</oduStatusPingRate><configHasChanges>on</configHasChanges><dealerConfigHasChanges>off</dealerConfigHasChanges><dealerHasChanges>off</dealerHasChanges><oduConfigHasChanges>off</oduConfigHasChanges><iduConfigHasChanges>off</iduConfigHasChanges><utilityEventsHasChanges>off</utilityEventsHasChanges></status>'''
                     self.send_response(200)
                     self.send_header("Content-Length", str(len(html)))
-                    self.send_header("Connection", "keep-alive")
                     self.send_header("Content-Type", "application/xml; charset=utf-8")
                     self.end_headers()
                     self.wfile.write(bytes(html, "utf8"))
@@ -218,16 +206,11 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
 
             else:
                 # Send 0 length 200 response
-                self.send_response(200)
-                self.send_header("Connection", "keep-alive")
-                self.send_header("Content-Length", "0")
-                self.end_headers()
-
+                self.send_empty_200()
 
 class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
     pass
 
-handler_object = MyHttpRequestHandler
 server = ThreadingSimpleServer(('0.0.0.0', api_server_listen_port), MyHttpRequestHandler)
 client.on_message = on_message
 client.loop_start()
