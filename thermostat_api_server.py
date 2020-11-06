@@ -35,6 +35,7 @@ def on_message(client, userdata, message):
     global changes_pending
     global candidate_configuration
     message.payload = message.payload.decode("utf-8")
+    print(f'''New message: {message.topic} {message.payload}''')
 
     if message.topic == "cmnd/thermostat/operating_mode":
         new_operating_mode = message.payload
@@ -82,7 +83,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(bytes(html, "utf8"))
 
     def send_empty_200(self):
-        print("** empty **")
+        #print("** empty **")
         self.send_response(200)
         self.send_header("Content-Length", "0")
         self.end_headers()
@@ -110,6 +111,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         elif "/config" in self.path:
             global changes_pending
             changes_pending = False
+            print(f'''New configuration: {candidate_configuration}''')
             html = f'''<config version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/config"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><atom:link rel="http://{api_server_address}/rels/dealer_config" href="http://{api_server_address}/systems/{thermostat_serial}/dealer_config"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><mode>{candidate_configuration["mode"]}</mode><fan>{candidate_configuration["fan"]}</fan><blight>10</blight><timeFormat>12</timeFormat><dst>on</dst><volume>high</volume><soundType>click</soundType><scrLockout>off</scrLockout><scrLockoutCode>0000</scrLockoutCode><humSetpoint>45</humSetpoint><dehumSetpoint>45</dehumSetpoint><utilityEvent/><zones><zone id="1"><name>Zone 1</name><hold>{candidate_configuration["hold"]}</hold><otmr/><htsp>{candidate_configuration["htsp"]}</htsp><clsp>{candidate_configuration["clsp"]}</clsp><program><day id="1"><period id="1"><time>06:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="2"><time>08:00</time><htsp>70</htsp><clsp>78</clsp></period><period id="3"><time>17:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="4"><time>22:00</time><htsp>70</htsp><clsp>78</clsp></period></day><day id="2"><period id="1"><time>06:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="2"><time>08:00</time><htsp>70</htsp><clsp>78</clsp></period><period id="3"><time>17:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="4"><time>22:00</time><htsp>70</htsp><clsp>78</clsp></period></day><day id="3"><period id="1"><time>06:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="2"><time>08:00</time><htsp>70</htsp><clsp>78</clsp></period><period id="3"><time>17:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="4"><time>22:00</time><htsp>70</htsp><clsp>78</clsp></period></day><day id="4"><period id="1"><time>06:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="2"><time>08:00</time><htsp>70</htsp><clsp>78</clsp></period><period id="3"><time>17:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="4"><time>22:00</time><htsp>70</htsp><clsp>78</clsp></period></day><day id="5"><period id="1"><time>06:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="2"><time>08:00</time><htsp>70</htsp><clsp>78</clsp></period><period id="3"><time>17:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="4"><time>22:00</time><htsp>70</htsp><clsp>78</clsp></period></day><day id="6"><period id="1"><time>06:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="2"><time>08:00</time><htsp>70</htsp><clsp>78</clsp></period><period id="3"><time>17:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="4"><time>22:00</time><htsp>70</htsp><clsp>78</clsp></period></day><day id="7"><period id="1"><time>06:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="2"><time>08:00</time><htsp>70</htsp><clsp>78</clsp></period><period id="3"><time>17:00</time><htsp>71</htsp><clsp>78</clsp></period><period id="4"><time>22:00</time><htsp>70</htsp><clsp>78</clsp></period></day></program></zone></zones></config>'''
             self.send_response(200)
             self.send_header("Content-Length", len(html))
@@ -123,11 +125,11 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
 
 
     def do_POST(self):
-        print()
+        #print()
         data = self.rfile.read(int(self.headers.get('Content-length'))).decode("utf-8")
-        print("data unparsed: {}".format(data))
+        #print("data unparsed: {}".format(data))
         data = unquote(data).strip("data=")
-        print("data parsed: {}".format(data))
+        #print("data parsed: {}".format(data))
         global current_configuration
         global candidate_configuration
         global first_start
