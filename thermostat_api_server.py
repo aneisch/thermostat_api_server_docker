@@ -28,8 +28,10 @@ thermostat_command_topic = os.environ['THERMOSTAT_COMMAND_TOPIC']
 thermostat_state_topic = os.environ['THERMOSTAT_STATE_TOPIC']
 thermostat_serial = os.environ['THERMOSTAT_SERIAL']
 
-client = mqttClient.Client("thermostat_api_server")
-client.connect(mqtt_address, mqtt_port)
+def on_connect(client, userdata, flags, rc):
+    print("Connected to MQTT")
+    client.subscribe(thermostat_command_topic)
+    print(f'''Subscribed to {thermostat_command_topic}''')
 
 def on_message(client, userdata, message):
     global changes_pending
@@ -209,8 +211,13 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
 class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
     pass
 
+client = mqttClient.Client("thermostat_api_server")
 server = ThreadingSimpleServer(('0.0.0.0', api_server_listen_port), MyHttpRequestHandler)
+
+client.on_connect = on_connect
 client.on_message = on_message
+client.connect(mqtt_address, mqtt_port)
+
 client.loop_start()
 client.subscribe(thermostat_command_topic)
 server.serve_forever()
