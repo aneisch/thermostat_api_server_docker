@@ -1,5 +1,7 @@
 from python:3.8-alpine
 
+LABEL org.opencontainers.image.source https://github.com/aneisch/thermostat_api_server_docker
+
 RUN apk add --no-cache --update py3-pip curl
 RUN pip install paho-mqtt
 
