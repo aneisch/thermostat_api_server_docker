@@ -12,7 +12,7 @@ version: '3.2'
 services:
     thermostat_api_server:
         container_name: thermostat_api_server
-        image: docker.pkg.github.com/aneisch/thermostat_api_server_docker/thermostat_mqtt_docker:latest
+        image: ghcr.io/aneisch/thermostat_mqtt_docker:latest
         ports:
             - '8080:8080'
         environment:
