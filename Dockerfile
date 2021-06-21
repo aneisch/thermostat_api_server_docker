@@ -1,15 +1,9 @@
-from python:3.8-slim-buster
+from python:3.8-alpine
 
+RUN apk add --no-cache --update py3-pip curl
 RUN pip install paho-mqtt
 
-# Install curl for healthcheck
-RUN apt-get update
-RUN apt-get -y upgrade
-RUN apt-get -y install --no-install-recommends curl
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/*
-
-RUN useradd thermostat_api
+RUN adduser -D thermostat_api
 
 ENV API_SERVER_ADDRESS 10.0.1.22
 ENV API_SERVER_LISTEN_PORT 8080
