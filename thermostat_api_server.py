@@ -20,8 +20,6 @@ current_configuration = {}
 changes_pending = False
 first_start = True
 
-api_server_address = os.environ['API_SERVER_ADDRESS']
-api_server_listen_port = int(os.environ['API_SERVER_LISTEN_PORT'])
 mqtt_address = os.environ['MQTT_SERVER']
 mqtt_port = int(os.environ['MQTT_PORT'])
 thermostat_command_topic = os.environ['THERMOSTAT_COMMAND_TOPIC']
@@ -212,7 +210,7 @@ class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
     pass
 
 client = mqttClient.Client("thermostat_api_server")
-server = ThreadingSimpleServer(('0.0.0.0', api_server_listen_port), MyHttpRequestHandler)
+server = ThreadingSimpleServer(('0.0.0.0', 8080), MyHttpRequestHandler)
 
 client.on_connect = on_connect
 client.on_message = on_message
