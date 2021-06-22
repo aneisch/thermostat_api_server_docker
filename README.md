@@ -18,5 +18,7 @@ services:
         environment:
             - THERMOSTAT_SERIAL=5687J272316
             - MQTT_SERVER=10.0.1.22
+            # Used in reply to thermostat
+            - API_SERVER_ADDRESS=10.0.1.22 
         restart: always
 ```
