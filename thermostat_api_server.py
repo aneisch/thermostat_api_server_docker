@@ -20,6 +20,7 @@ current_configuration = {}
 changes_pending = False
 first_start = True
 
+api_server_address = os.environ['API_SERVER_ADDRESS']
 mqtt_address = os.environ['MQTT_SERVER']
 mqtt_port = int(os.environ['MQTT_PORT'])
 thermostat_command_topic = os.environ['THERMOSTAT_COMMAND_TOPIC']
