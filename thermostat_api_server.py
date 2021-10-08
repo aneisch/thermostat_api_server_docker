@@ -198,22 +198,22 @@ def on_message(client, userdata, message):
     message.payload = message.payload.decode("utf-8")
     print(f'''New message: {message.topic} {message.payload}''')
 
-    if message.topic == "cmnd/thermostat/operating_mode":
+    if message.topic == f"{thermostat_command_topic}/operating_mode":
         new_operating_mode = message.payload
         changes_pending = True
         candidate_configuration["mode"] = new_operating_mode
 
-    elif message.topic == "cmnd/thermostat/fan_mode":
+    elif message.topic == f"{thermostat_command_topic}/fan_mode":
         new_fan_mode = message.payload
         changes_pending = True
         candidate_configuration["fan"] = new_fan_mode
 
-    elif message.topic == "cmnd/thermostat/hold":
+    elif message.topic == f"{thermostat_command_topic}/hold":
         new_hold_mode = message.payload
         changes_pending = True
         candidate_configuration["hold"] = new_hold_mode
 
-    elif message.topic == "cmnd/thermostat/temperature":
+    elif message.topic == f"{thermostat_command_topic}/temperature":
         new_temperature = message.payload
 
         if 'clsp' in candidate_configuration:
