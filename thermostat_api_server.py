@@ -29,39 +29,40 @@ thermostat_command_topic = f"homeassistant/climate/{thermostat_name}/cmnd"
 thermostat_state_topic = f"homeassistant/climate/{thermostat_name}/state"
 thermostat_serial = os.environ['THERMOSTAT_SERIAL']
 
+device = {"mdl": "TSTAT0201CW", "mf": "Observer", "ids": thermostat_serial, "name": thermostat_name, "cns": [["ip", "unknown"]]}
+
+climate_configuration_payload = {
+    "act_t": thermostat_state_topic,
+    "act_tpl": "{% if value_json.coolicon == 'on' %}cooling{% elif value_json.heaticon == 'on' %}heating{% elif value_json.coolicon == 'off' and value_json.heaticon == 'off' %}idle{% endif %}",
+    "curr_temp_t": thermostat_state_topic,
+    "curr_temp_tpl": "{{ value_json.rt }}",
+    "device": device,
+    "fan_mode_cmd_t": thermostat_command_topic + "/fan_mode",
+    "fan_mode_stat_t": thermostat_state_topic,
+    "fan_mode_stat_tpl": "{{ value_json.fan }}",
+    "hold_cmd_t": thermostat_command_topic + "/hold",
+    "hold_stat_t": thermostat_state_topic,
+    "hold_stat_tpl": "{{ value_json.hold }}",
+    "max_temp": 85,
+    "min_temp": 55,
+    "mode_cmd_t": thermostat_command_topic + "/operating_mode",
+    "mode_stat_t": thermostat_state_topic,
+    "mode_stat_tpl": "{{ value_json.mode }}",
+    "modes": ["off", "cool", "heat"],
+    "name": thermostat_name,
+    "temp_cmd_t": thermostat_command_topic + "/temperature",
+    "temp_stat_t": thermostat_state_topic,
+    "temp_stat_tpl": "{% if value_json.mode == 'cool' %}{{ value_json.clsp }}{% elif value_json.mode == 'heat' %}{{ value_json.htsp }}{% endif %}",
+    "temp_step":"1",
+    "temperature_unit": "F",
+    "uniq_id": thermostat_serial
+}
+
 def on_connect(client, userdata, flags, rc):
     print("Connected to MQTT")
     client.subscribe(f"{thermostat_command_topic}/#")
     print(f'''Subscribed to {thermostat_command_topic}/#''')
 
-    device = {"mdl": "TSTAT0201CW", "mf": "Observer", "ids": thermostat_serial, "name": thermostat_name}
-
-    climate_configuration_payload = {
-        "act_t": thermostat_state_topic,
-        "act_tpl": "{% if value_json.coolicon == 'on' %}cooling{% elif value_json.heaticon == 'on' %}heating{% elif value_json.coolicon == 'off' and value_json.heaticon == 'off' %}idle{% endif %}",
-        "curr_temp_t": thermostat_state_topic,
-        "curr_temp_tpl": "{{ value_json.rt }}",
-        "device": device,
-        "fan_mode_cmd_t": thermostat_command_topic + "/fan_mode",
-        "fan_mode_stat_t": thermostat_state_topic,
-        "fan_mode_stat_tpl": "{{ value_json.fan }}",
-        "hold_cmd_t": thermostat_command_topic + "/hold",
-        "hold_stat_t": thermostat_state_topic,
-        "hold_stat_tpl": "{{ value_json.hold }}",
-        "max_temp": 85,
-        "min_temp": 55,
-        "mode_cmd_t": thermostat_command_topic + "/operating_mode",
-        "mode_stat_t": thermostat_state_topic,
-        "mode_stat_tpl": "{{ value_json.mode }}",
-        "modes": ["off", "cool", "heat"],
-        "name": thermostat_name,
-        "temp_cmd_t": thermostat_command_topic + "/temperature",
-        "temp_stat_t": thermostat_state_topic,
-        "temp_stat_tpl": "{% if value_json.mode == 'cool' %}{{ value_json.clsp }}{% elif value_json.mode == 'heat' %}{{ value_json.htsp }}{% endif %}",
-        "temp_step":"1",
-        "temperature_unit": "F",
-        "uniq_id": thermostat_serial
-    }
     client.publish(f'homeassistant/climate/{thermostat_serial}-climate/config', json.dumps(climate_configuration_payload), retain=True)
 
     temperature_sensor_configuration_payload = {
@@ -340,6 +341,11 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                     candidate_configuration['clsp'] = current_configuration['clsp']
                     candidate_configuration['htsp'] = current_configuration['htsp']
                     candidate_configuration['mode'] = current_configuration['mode']
+
+                    # Update climate device with client IP
+                    climate_configuration_payload["device"]["cns"] = [["ip", self.client_address[0]]]
+                    client.publish(f'homeassistant/climate/{thermostat_serial}-climate/config', json.dumps(climate_configuration_payload), retain=True)
+                    
                     first_start = False
                     self.send_no_changes()
 
