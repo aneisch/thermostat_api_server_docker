@@ -31,7 +31,7 @@ thermostat_serial = os.environ['THERMOSTAT_SERIAL']
 
 def on_connect(client, userdata, flags, rc):
     print("Connected to MQTT")
-    client.subscribe(thermostat_command_topic)
+    client.subscribe(f"thermostat_command_topic/#")
     print(f'''Subscribed to {thermostat_command_topic}''')
 
     device = {"mdl": "TSTAT0201CW", "mf": "Observer", "ids": thermostat_serial, "name": thermostat_name}
