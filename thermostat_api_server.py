@@ -191,6 +191,16 @@ def on_connect(client, userdata, flags, rc):
     }
     client.publish(f'homeassistant/sensor/{thermostat_serial}-cfm/config', json.dumps(cfm_sensor_configuration_payload), retain=True)
 
+    last_time_sensor_configuration_payload = {
+        "device": device,
+        "stat_t": thermostat_state_topic,
+        "val_tpl": "{{ value_json.last_communication }}",
+        "name": f"{thermostat_name} Last Communication",
+        "ic": "mdi:clock",
+        "uniq_id": f"{thermostat_serial}-last-time"
+    }
+    client.publish(f'homeassistant/sensor/{thermostat_serial}-last-time/config', json.dumps(last_time_sensor_configuration_payload), retain=True)
+
     print('Published Config Entries')
 
 def on_message(client, userdata, message):
@@ -296,6 +306,8 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         monitored = ["rt","rh","mode","fan","coolicon","heaticon","fanicon","hold","filtrlvl","clsp","htsp","opstat","iducfm","oat","oducoiltmp"]
         paths = ["/status", "/odu_status"]
         received_message = {}
+
+        current_configuration["last_communication"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
         if len(data) >= 45:
             for path in paths:
