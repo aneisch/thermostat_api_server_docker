@@ -16,9 +16,14 @@ services:
         ports:
             - '8080:8080'
         environment:
+            # Name for Device in HA
+            - THERMOSTAT_NAME=Upstairs
             - THERMOSTAT_SERIAL=5687J272316
             - MQTT_SERVER=10.0.1.22
             # Used in reply to thermostat
             - API_SERVER_ADDRESS=10.0.1.22 
         restart: always
 ```
+### Home Assistant Configuration
+
+Uses [MQTT Discovery](https://www.home-assistant.io/docs/mqtt/discovery/) to add climate device and associated sensors. If MQTT discovery is enabled, no configuration should be necessary aside from setting container environment variables. 
