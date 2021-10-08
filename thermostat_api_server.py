@@ -180,16 +180,16 @@ def on_connect(client, userdata, flags, rc):
     }
     client.publish(f'homeassistant/sensor/{thermostat_serial}-oat/config', json.dumps(oat_sensor_configuration_payload), retain=True)
 
-    cfm_sensor_configuration_payload = {
+    iducfm_sensor_configuration_payload = {
         "device": device,
         "stat_t": thermostat_state_topic,
         "name": f"{thermostat_name} Indoor CFM",
         "ic": "mdi:fan",
-        "val_tpl": "{{ value_json.cfm }}",
-        "uniq_id": f"{thermostat_serial}-cfm",
+        "val_tpl": "{{ value_json.iducfm }}",
+        "uniq_id": f"{thermostat_serial}-iducfm",
         "unit_of_meas": "cfm"
     }
-    client.publish(f'homeassistant/sensor/{thermostat_serial}-cfm/config', json.dumps(cfm_sensor_configuration_payload), retain=True)
+    client.publish(f'homeassistant/sensor/{thermostat_serial}-iducfm/config', json.dumps(iducfm_sensor_configuration_payload), retain=True)
 
     last_time_sensor_configuration_payload = {
         "device": device,
