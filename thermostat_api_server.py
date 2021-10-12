@@ -307,8 +307,6 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         paths = ["/status", "/odu_status"]
         received_message = {}
 
-        current_configuration["last_communication"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-
         if len(data) >= 45:
             for path in paths:
                 if path in self.path:
@@ -348,31 +346,33 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
 
                 client.publish(thermostat_state_topic, str(current_configuration).replace("'",'"').replace("None",'""'), retain=True)
 
-                # Initialize candidate_configuration as current_configuration at first start
-                if "/status" in self.path and first_start == True:
-                    candidate_configuration['clsp'] = current_configuration['clsp']
-                    candidate_configuration['htsp'] = current_configuration['htsp']
-                    candidate_configuration['mode'] = current_configuration['mode']
+                if "/status" in self.path:
+                    current_configuration["last_communication"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
-                    # Update climate device with client IP
-                    climate_configuration_payload["device"]["cns"] = [["ip", self.client_address[0]]]
-                    client.publish(f'homeassistant/climate/{thermostat_serial}-climate/config', json.dumps(climate_configuration_payload), retain=True)
+                    # Initialize candidate_configuration as current_configuration at first start
+                    if first_start == True:
+                        candidate_configuration['clsp'] = current_configuration['clsp']
+                        candidate_configuration['htsp'] = current_configuration['htsp']
+                        candidate_configuration['mode'] = current_configuration['mode']
+
+                        # Update climate device with client IP
+                        climate_configuration_payload["device"]["cns"] = [["ip", self.client_address[0]]]
+                        client.publish(f'homeassistant/climate/{thermostat_serial}-climate/config', json.dumps(climate_configuration_payload), retain=True)
                     
-                    first_start = False
-                    self.send_no_changes()
+                        first_start = False
+                        self.send_no_changes()
 
-                elif "/status" in self.path and changes_pending == False:
-                    self.send_no_changes()
+                    elif changes_pending == False:
+                        self.send_no_changes()
 
-                elif "/status" in self.path and changes_pending == True:
-                    print("Responding with change notice...")
-                    html = f'''<status version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/status"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><pingRate>0</pingRate><dealerConfigPingRate>0</dealerConfigPingRate><weatherPingRate>14400</weatherPingRate><equipEventsPingRate>0</equipEventsPingRate><historyPingRate>0</historyPingRate><iduFaultsPingRate>0</iduFaultsPingRate><iduStatusPingRate>86400</iduStatusPingRate><oduFaultsPingRate>0</oduFaultsPingRate><oduStatusPingRate>0</oduStatusPingRate><configHasChanges>on</configHasChanges><dealerConfigHasChanges>off</dealerConfigHasChanges><dealerHasChanges>off</dealerHasChanges><oduConfigHasChanges>off</oduConfigHasChanges><iduConfigHasChanges>off</iduConfigHasChanges><utilityEventsHasChanges>off</utilityEventsHasChanges></status>'''
-                    self.send_response(200)
-                    self.send_header("Content-Length", str(len(html)))
-                    self.send_header("Content-Type", "application/xml; charset=utf-8")
-                    self.end_headers()
-                    self.wfile.write(bytes(html, "utf8"))
-
+                    elif changes_pending == True:
+                        print("Responding with change notice...")
+                        html = f'''<status version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/status"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><pingRate>0</pingRate><dealerConfigPingRate>0</dealerConfigPingRate><weatherPingRate>14400</weatherPingRate><equipEventsPingRate>0</equipEventsPingRate><historyPingRate>0</historyPingRate><iduFaultsPingRate>0</iduFaultsPingRate><iduStatusPingRate>86400</iduStatusPingRate><oduFaultsPingRate>0</oduFaultsPingRate><oduStatusPingRate>0</oduStatusPingRate><configHasChanges>on</configHasChanges><dealerConfigHasChanges>off</dealerConfigHasChanges><dealerHasChanges>off</dealerHasChanges><oduConfigHasChanges>off</oduConfigHasChanges><iduConfigHasChanges>off</iduConfigHasChanges><utilityEventsHasChanges>off</utilityEventsHasChanges></status>'''
+                        self.send_response(200)
+                        self.send_header("Content-Length", str(len(html)))
+                        self.send_header("Content-Type", "application/xml; charset=utf-8")
+                        self.end_headers()
+                        self.wfile.write(bytes(html, "utf8"))
 
         # Malformed message
         else:
