@@ -65,6 +65,16 @@ def on_connect(client, userdata, flags, rc):
 
     client.publish(f'homeassistant/climate/{thermostat_serial}-climate/config', json.dumps(climate_configuration_payload), retain=True)
 
+    latest_equipment_event_payload = {
+        "device": device,
+        "stat_t": thermostat_state_topic,
+        "name": f"{thermostat_name} Latest Equipment Event",
+        "ic": "mdi:alert",
+        "val_tpl": "{{ value_json.latest_equip }}",
+        "uniq_id": f"{thermostat_serial}-latest-equip"
+    }
+    client.publish(f'homeassistant/sensor/{thermostat_serial}-latest-equip/config', json.dumps(latest_equipment_event_payload), retain=True)
+
     temperature_sensor_configuration_payload = {
         "device": device,
         "stat_t": thermostat_state_topic,
@@ -250,7 +260,6 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(bytes(html, "utf8"))
 
     def send_empty_200(self):
-        #print("** empty **")
         self.send_response(200)
         self.send_header("Content-Length", "0")
         self.end_headers()
@@ -291,11 +300,8 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
             self.send_empty_200()
 
     def do_POST(self):
-        #print()
         data = self.rfile.read(int(self.headers.get('Content-length'))).decode("utf-8")
-        #print("data unparsed: {}".format(data))
         data = unquote(data).strip("data=")
-        #print("data parsed: {}".format(data))
         global current_configuration
         global candidate_configuration
         global first_start
@@ -304,75 +310,77 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         match = False
 
         monitored = ["rt","rh","mode","fan","coolicon","heaticon","fanicon","hold","filtrlvl","clsp","htsp","opstat","iducfm","oat","oducoiltmp"]
-        paths = ["/status", "/odu_status"]
+        paths = ["/status", "/odu_status","/equipment_events"]
         received_message = {}
 
-        if len(data) >= 45:
-            for path in paths:
-                if path in self.path:
-                    match = True
-                    break
+        final_locator = f'/{self.path.split("/")[-1:][0]}' # eg /status
 
-            # Parse and create dict of received message for paths we care about
-            if match == True:
-                try:
-                    root = ET.fromstring(data)
-                except:
-                    if "/status" in self.path:
-                        self.send_no_changes()
-                    else:
-                        self.send_empty_200
-                    return
-
+        if len(data) >= 45 and final_locator in paths:
+            try: 
+                # Parse and create dict of received message
+                root = ET.fromstring(data)
                 children = list(root)
-                for child in root.iter():
-                    received_message[child.tag] = child.text
-
-            # ignore other paths
-            else:
-                # Send 0 length 200 response
-                self.send_empty_200()
+                if "/equipment_events" in final_locator:
+                    for child in root.iter():
+                        # Only get latest equipment event
+                        if child.tag in received_message:
+                            continue
+                        else:
+                            received_message[child.tag] = child.text
+                else:
+                    for child in root.iter():
+                        received_message[child.tag] = child.text
+            except:
+                if "/status" in self.path:
+                    self.send_no_changes()
+                else:
+                    self.send_empty_200
                 return
 
-            if "/odu_status" in self.path or "/status" in self.path:
+            # Build current_configuration with monitored variables
+            for option in monitored:
+                if option in received_message:
+                    current_configuration[option] = received_message[option]
 
-                # We don't need any kind of response for this path
-                if "/odu_status" in self.path:
-                    self.send_empty_200()
+            # We don't need any kind of response for this path
+            if "/odu_status" in final_locator:
+                self.send_empty_200()
 
-                for option in monitored:
-                    if option in received_message:
-                        current_configuration[option] = received_message[option]
+            elif "/equipment_events" in final_locator:
+                state = f"{received_message['localtime'][1:]}: {received_message['description']} (Active: {'True' if {received_message['active']} == 'on' else 'False'})".replace("  "," ")
+                current_configuration["latest_equip"] = state
+                self.send_empty_200()
 
-                client.publish(thermostat_state_topic, str(current_configuration).replace("'",'"').replace("None",'""'), retain=True)
+            elif "/status" in final_locator:
+                current_configuration["last_communication"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
-                if "/status" in self.path:
-                    current_configuration["last_communication"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+                # Initialize candidate_configuration as current_configuration at first start
+                if first_start == True:
+                    candidate_configuration['clsp'] = current_configuration['clsp']
+                    candidate_configuration['htsp'] = current_configuration['htsp']
+                    candidate_configuration['mode'] = current_configuration['mode']
 
-                    # Initialize candidate_configuration as current_configuration at first start
-                    if first_start == True:
-                        candidate_configuration['clsp'] = current_configuration['clsp']
-                        candidate_configuration['htsp'] = current_configuration['htsp']
-                        candidate_configuration['mode'] = current_configuration['mode']
+                    # Update climate device with client IP
+                    climate_configuration_payload["device"]["cns"] = [["ip", self.client_address[0]]]
+                    client.publish(f'homeassistant/climate/{thermostat_serial}-climate/config', json.dumps(climate_configuration_payload), retain=True)
+                
+                    first_start = False
+                    self.send_no_changes()
 
-                        # Update climate device with client IP
-                        climate_configuration_payload["device"]["cns"] = [["ip", self.client_address[0]]]
-                        client.publish(f'homeassistant/climate/{thermostat_serial}-climate/config', json.dumps(climate_configuration_payload), retain=True)
-                    
-                        first_start = False
-                        self.send_no_changes()
+                elif changes_pending == True:
+                    print("Responding with change notice...")
+                    html = f'''<status version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/status"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><pingRate>0</pingRate><dealerConfigPingRate>0</dealerConfigPingRate><weatherPingRate>14400</weatherPingRate><equipEventsPingRate>0</equipEventsPingRate><historyPingRate>0</historyPingRate><iduFaultsPingRate>0</iduFaultsPingRate><iduStatusPingRate>86400</iduStatusPingRate><oduFaultsPingRate>0</oduFaultsPingRate><oduStatusPingRate>0</oduStatusPingRate><configHasChanges>on</configHasChanges><dealerConfigHasChanges>off</dealerConfigHasChanges><dealerHasChanges>off</dealerHasChanges><oduConfigHasChanges>off</oduConfigHasChanges><iduConfigHasChanges>off</iduConfigHasChanges><utilityEventsHasChanges>off</utilityEventsHasChanges></status>'''
+                    self.send_response(200)
+                    self.send_header("Content-Length", str(len(html)))
+                    self.send_header("Content-Type", "application/xml; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(bytes(html, "utf8"))
 
-                    elif changes_pending == False:
-                        self.send_no_changes()
+                else:
+                    self.send_no_changes()
 
-                    elif changes_pending == True:
-                        print("Responding with change notice...")
-                        html = f'''<status version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/status"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><pingRate>0</pingRate><dealerConfigPingRate>0</dealerConfigPingRate><weatherPingRate>14400</weatherPingRate><equipEventsPingRate>0</equipEventsPingRate><historyPingRate>0</historyPingRate><iduFaultsPingRate>0</iduFaultsPingRate><iduStatusPingRate>86400</iduStatusPingRate><oduFaultsPingRate>0</oduFaultsPingRate><oduStatusPingRate>0</oduStatusPingRate><configHasChanges>on</configHasChanges><dealerConfigHasChanges>off</dealerConfigHasChanges><dealerHasChanges>off</dealerHasChanges><oduConfigHasChanges>off</oduConfigHasChanges><iduConfigHasChanges>off</iduConfigHasChanges><utilityEventsHasChanges>off</utilityEventsHasChanges></status>'''
-                        self.send_response(200)
-                        self.send_header("Content-Length", str(len(html)))
-                        self.send_header("Content-Type", "application/xml; charset=utf-8")
-                        self.end_headers()
-                        self.wfile.write(bytes(html, "utf8"))
+            # Update MQTT topic with current states
+            client.publish(thermostat_state_topic, str(current_configuration).replace("'",'"').replace("None",'""'), retain=True)
 
         # Malformed message
         else:
