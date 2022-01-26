@@ -20,6 +20,11 @@ services:
             - THERMOSTAT_NAME=Upstairs
             - THERMOSTAT_SERIAL=5687J272316
             - MQTT_SERVER=10.0.1.22
+            # Optional MQTT_PORT - defaults to 1883
+            #- MQTT_PORT=1883
+            # Optional username/password
+            #- MQTT_USERNAME=username
+            #- MQTT_PASSWORD=password
             # Used in reply to thermostat
             - API_SERVER_ADDRESS=10.0.1.22 
         restart: always
