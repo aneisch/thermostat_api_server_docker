@@ -402,6 +402,7 @@ server = ThreadingSimpleServer(('0.0.0.0', 8080), MyHttpRequestHandler)
 
 client.on_connect = on_connect
 client.on_message = on_message
+print("Connecting to MQTT")
 client.connect(mqtt_address, mqtt_port)
 
 client.loop_start()
