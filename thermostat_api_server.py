@@ -24,7 +24,7 @@ first_start = True
 api_server_address = os.environ['API_SERVER_ADDRESS']
 mqtt_address = os.environ['MQTT_SERVER']
 mqtt_port = int(os.environ['MQTT_PORT'])
-if (os.environ['MQTT_USERNAME']):
+if 'MQTT_USERNAME' in os.environ:
   mqtt_username = os.environ['MQTT_USERNAME']
   mqtt_password = os.environ['MQTT_PASSWORD']
 thermostat_name = os.environ['THERMOSTAT_NAME']
@@ -398,7 +398,7 @@ class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
     pass
 
 client = mqttClient.Client(f"thermostat_api_server_{thermostat_serial}")
-if (mqtt_username):
+if "mqtt_username" in locals():
   client.username_pw_set(username=mqtt_username,password=mqtt_password)
 server = ThreadingSimpleServer(('0.0.0.0', 8080), MyHttpRequestHandler)
 
