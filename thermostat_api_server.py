@@ -40,6 +40,7 @@ climate_configuration_payload = {
     "curr_temp_t": thermostat_state_topic,
     "curr_temp_tpl": "{{ value_json.rt }}",
     "device": device,
+    "fan_modes": ["auto", "low", "med", "high"]
     "fan_mode_cmd_t": thermostat_command_topic + "/fan_mode",
     "fan_mode_stat_t": thermostat_state_topic,
     "fan_mode_stat_tpl": "{{ value_json.fan }}",
