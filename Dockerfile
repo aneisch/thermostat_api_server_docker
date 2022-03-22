@@ -9,7 +9,7 @@ EXPOSE 8080
 
 RUN apk add --no-cache --update py3-pip curl
 RUN pip install paho-mqtt
-RUN apk upgrade krb5-libs expat # Fix CVE-2021-36222, multiple for Expat
+RUN apk upgrade krb5-libs expat libretls # Fix CVE-2021-36222, multiple for Expat, CVE-2022-0778 libretls
 
 RUN adduser -D thermostat_api
 
