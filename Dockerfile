@@ -1,4 +1,6 @@
-from python:3.8-alpine
+FROM python:3.8-alpine as base
+
+FROM base as builder
 
 LABEL org.opencontainers.image.source https://github.com/aneisch/thermostat_api_server_docker
 
@@ -7,9 +9,12 @@ HEALTHCHECK --interval=60s --timeout=5s \
   
 EXPOSE 8080
 
-RUN apk add --no-cache --update py3-pip curl
-RUN pip install paho-mqtt
-RUN apk upgrade krb5-libs expat libretls # Fix CVE-2021-36222, multiple for Expat, CVE-2022-0778 libretls
+RUN apk add --no-cache --update py3-pip && \
+  pip install --no-cache-dir --prefix=/install paho-mqtt
+
+FROM base
+
+COPY --from=builder /install /usr/local
 
 RUN adduser -D thermostat_api
 
@@ -20,7 +25,9 @@ ENV THERMOSTAT_SERIAL XXXXXXXXXX
 ENV THERMOSTAT_NAME Thermostat
 
 COPY ./thermostat_api_server.py /usr/bin/thermostat_api_server.py
-RUN chmod +x /usr/bin/thermostat_api_server.py
+
+RUN chmod +x /usr/bin/thermostat_api_server.py && \
+  apk --purge del apk-tools
 
 USER thermostat_api
 
