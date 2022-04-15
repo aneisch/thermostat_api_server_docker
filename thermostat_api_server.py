@@ -133,7 +133,8 @@ def on_connect(client, userdata, flags, rc):
         "name": f"{thermostat_name} Setpoint",
         "ic": "mdi:thermometer",
         "val_tpl": "{% if value_json.mode == 'cool' %}{{ value_json.clsp }}{% elif value_json.mode == 'heat' %}{{ value_json.htsp }}{% endif %}",
-        "uniq_id": f"{thermostat_serial}-setpoint"
+        "uniq_id": f"{thermostat_serial}-setpoint",
+        "unit_of_meas": "°F"
     }
     client.publish(f'homeassistant/sensor/{thermostat_serial}-setpoint/config', json.dumps(setpoint_sensor_configuration_payload), retain=True)
 
