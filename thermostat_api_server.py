@@ -68,7 +68,7 @@ def on_connect(client, userdata, flags, rc):
     latest_equipment_event_payload = {
         "device": device,
         "stat_t": thermostat_state_topic,
-        "name": f"{thermostat_name} Latest Equipment Event",
+        "name": f"{thermostat_name} Active Equipment Event",
         "ic": "mdi:alert",
         "val_tpl": "{{ value_json.latest_equip }}",
         "uniq_id": f"{thermostat_serial}-latest-equip"
@@ -348,7 +348,10 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                 self.send_empty_200()
 
             elif "/equipment_events" in final_locator:
-                state = f"{received_message['localtime'][1:]}: {received_message['description']} (Active: {'True' if {received_message['active']} == 'on' else 'False'})".replace("  "," ")
+                if received_message['active'] == "on":
+                    state = f"{received_message['localtime'][1:]}: {received_message['description']}"
+                else:
+                    state = "No Active Event"
                 current_configuration["latest_equip"] = state
                 self.send_empty_200()
 
