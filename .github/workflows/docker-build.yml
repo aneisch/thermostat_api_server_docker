@@ -47,8 +47,3 @@ jobs:
           echo VERSION=$VERSION
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
-
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - uses: gautamkrishnar/keepalive-workflow@v1
