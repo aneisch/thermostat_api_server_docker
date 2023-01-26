@@ -2,7 +2,7 @@ FROM python:3.8-alpine as base
 
 FROM base as builder
 
-RUN apk add --no-cache --update py3-pip && \
+RUN apk add --no-cache --update py3-pip curl && \
   pip install --no-cache-dir --prefix=/install paho-mqtt
 
 FROM base
