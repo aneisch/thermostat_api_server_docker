@@ -2,7 +2,7 @@ FROM python:3.8-alpine as base
 
 FROM base as builder
 
-RUN apk add --no-cache --update py3-pip curl && \
+RUN apk add --no-cache --update py3-pip && \
   pip install --no-cache-dir --prefix=/install paho-mqtt
 
 FROM base
@@ -24,7 +24,8 @@ ENV THERMOSTAT_NAME Thermostat
 
 COPY ./thermostat_api_server.py /usr/bin/thermostat_api_server.py
 
-RUN chmod +x /usr/bin/thermostat_api_server.py && \
+RUN apk add --no-cache --update curl && \
+  chmod +x /usr/bin/thermostat_api_server.py && \
   adduser -D thermostat_api && \
   apk --purge del apk-tools
 
