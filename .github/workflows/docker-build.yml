@@ -84,7 +84,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ IMAGE_ID }}:${{ VERSION }}-arm64
+          tags: ${{ env.IMAGE_ID }}:${{ env.VERSION }}-arm64
           platforms: linux/arm64/v8
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
