@@ -65,7 +65,7 @@ jobs:
             ${{ runner.os }}-buildx-
       - name: Log into Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      - name: Push Image
+      - name: Name Image
         run: |
           IMAGE_ID=ghcr.io/aneisch/${{ env.IMAGE_NAME }}
           # Change all uppercase to lowercase
@@ -84,7 +84,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: $IMAGE_ID:$VERSION-arm64
+          tags: ${{ IMAGE_ID }}:${{ VERSION }}-arm64
           platforms: linux/arm64/v8
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
