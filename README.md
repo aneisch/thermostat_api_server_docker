@@ -20,14 +20,14 @@ services:
             # Name for Device in HA
             - THERMOSTAT_NAME=Upstairs
             - THERMOSTAT_SERIAL=5687J272316
-            - MQTT_SERVER=10.0.1.22
+            - MQTT_SERVER=10.0.1.22 # This can be an internal docker IP or an IP on your "real" network that exposes the MQTT service
             # Optional MQTT_PORT - defaults to 1883
             #- MQTT_PORT=1883
             # Optional username/password
             #- MQTT_USERNAME=username
             #- MQTT_PASSWORD=password
             # Used in reply to thermostat
-            - API_SERVER_ADDRESS=10.0.1.22 
+            - API_SERVER_ADDRESS=10.0.1.22 # This should be the IP where a wifi client can access this container port 8080, NOT an internal docker IP
         restart: always
 ```
 ### Home Assistant Configuration
