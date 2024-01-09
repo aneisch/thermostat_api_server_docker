@@ -13,7 +13,7 @@ version: '3.2'
 services:
     thermostat_api_server:
         container_name: thermostat_api_server
-        image: ghcr.io/aneisch/thermostat_api_server:latest
+        image: ghcr.io/aneisch/thermostat_api_server:latest # amd64, or latest-arm64 for ARM devices
         ports:
             - '8080:8080'
         environment:
