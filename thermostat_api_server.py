@@ -320,15 +320,13 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
 
         html = ""
         match = False
-
         monitored = ["rt","rh","mode","fan","coolicon","heaticon","fanicon","hold","filtrlvl","clsp","htsp","opstat","iducfm","oat","oducoiltmp"]
         paths = ["/status", "/odu_status","/equipment_events"] # we only need data from these paths
         received_message = {}
-
         final_locator = f'/{self.path.split("/")[-1:][0]}' # eg /status
+        logging.debug(f"{final_locator} -- {data}")
 
         if len(data) >= 45 and final_locator in paths:
-            logging.debug(f"{final_locator} -- {data}")
             try: 
                 # Parse and create dict of received message
                 root = ET.fromstring(data)
