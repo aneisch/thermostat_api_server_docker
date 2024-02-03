@@ -318,6 +318,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         final_locator = f'/{self.path.split("/")[-1:][0]}' # eg /status
 
         if len(data) >= 45 and final_locator in paths:
+            print(f"DEBUG: {final_locator} -- {data}")
             try: 
                 # Parse and create dict of received message
                 root = ET.fromstring(data)
@@ -357,6 +358,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                 self.send_empty_200()
 
             elif "/status" in final_locator:
+                print(f"DEBUG: {current_configuration}")
                 current_configuration["last_communication"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
                 # Initialize candidate_configuration as current_configuration at first start
