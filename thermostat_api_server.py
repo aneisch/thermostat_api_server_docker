@@ -12,6 +12,15 @@ import os
 import socketserver
 import time
 import json
+import logging
+
+logging.basicConfig(
+    level=os.environ['LOG_LEVEL'], format="%(asctime)s -- %(levelname)s -- %(message)s",
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # Allow faster script restart
 socketserver.TCPServer.allow_reuse_address = True
@@ -60,9 +69,9 @@ climate_configuration_payload = {
 }
 
 def on_connect(client, userdata, flags, rc):
-    print("Connected to MQTT")
+    logging.info("Connected to MQTT")
     client.subscribe(f"{thermostat_command_topic}/#")
-    print(f'''Subscribed to {thermostat_command_topic}/#''')
+    logging.info(f'''Subscribed to {thermostat_command_topic}/#''')
 
     client.publish(f'homeassistant/climate/{thermostat_serial}-climate/config', json.dumps(climate_configuration_payload), retain=True)
 
@@ -213,13 +222,13 @@ def on_connect(client, userdata, flags, rc):
     }
     client.publish(f'homeassistant/sensor/{thermostat_serial}-last-time/config', json.dumps(last_time_sensor_configuration_payload), retain=True)
 
-    print('Published Config Entries')
+    logging.info('Published Config Entries')
 
 def on_message(client, userdata, message):
     global changes_pending
     global candidate_configuration
     message.payload = message.payload.decode("utf-8")
-    print(f'''New message: {message.topic} {message.payload}''')
+    logging.info(f'''New message: {message.topic} {message.payload}''')
 
     if message.topic == f"{thermostat_command_topic}/operating_mode":
         new_operating_mode = message.payload
@@ -289,7 +298,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         elif "/config" in self.path:
             global changes_pending
             changes_pending = False
-            print(f'''New configuration: {candidate_configuration}''')
+            logging.info(f'''New configuration: {candidate_configuration}''')
             html = f'''<config version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/config"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><atom:link rel="http://{api_server_address}/rels/dealer_config" href="http://{api_server_address}/systems/{thermostat_serial}/dealer_config"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><mode>{candidate_configuration["mode"]}</mode><fan>{candidate_configuration["fan"]}</fan><blight>10</blight><timeFormat>12</timeFormat><dst>on</dst><volume>high</volume><soundType>click</soundType><scrLockout>off</scrLockout><scrLockoutCode>0000</scrLockoutCode><humSetpoint>45</humSetpoint><dehumSetpoint>45</dehumSetpoint><utilityEvent/><zones><zone id="1"><name>Zone 1</name><hold>{candidate_configuration["hold"]}</hold><otmr/><htsp>{candidate_configuration["htsp"]}</htsp><clsp>{candidate_configuration["clsp"]}</clsp><program></program></zone></zones></config>'''
             self.send_response(200)
             self.send_header("Content-Length", len(html))
@@ -318,7 +327,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         final_locator = f'/{self.path.split("/")[-1:][0]}' # eg /status
 
         if len(data) >= 45 and final_locator in paths:
-            print(f"DEBUG: {final_locator} -- {data}")
+            logging.debug(f"{final_locator} -- {data}")
             try: 
                 # Parse and create dict of received message
                 root = ET.fromstring(data)
@@ -358,7 +367,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                 self.send_empty_200()
 
             elif "/status" in final_locator:
-                print(f"DEBUG: {current_configuration}")
+                logging.debug(f"{current_configuration}")
                 current_configuration["last_communication"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
                 # Initialize candidate_configuration as current_configuration at first start
@@ -375,7 +384,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                     self.send_no_changes()
 
                 elif changes_pending == True:
-                    print("Responding with change notice...")
+                    logging.info("Responding with change notice...")
                     html = f'''<status version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/status"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><pingRate>0</pingRate><dealerConfigPingRate>0</dealerConfigPingRate><weatherPingRate>14400</weatherPingRate><equipEventsPingRate>60</equipEventsPingRate><historyPingRate>86400</historyPingRate><iduFaultsPingRate>86400</iduFaultsPingRate><iduStatusPingRate>86400</iduStatusPingRate><oduFaultsPingRate>86400</oduFaultsPingRate><oduStatusPingRate>0</oduStatusPingRate><configHasChanges>on</configHasChanges><dealerConfigHasChanges>off</dealerConfigHasChanges><dealerHasChanges>off</dealerHasChanges><oduConfigHasChanges>off</oduConfigHasChanges><iduConfigHasChanges>off</iduConfigHasChanges><utilityEventsHasChanges>off</utilityEventsHasChanges></status>'''
                     self.send_response(200)
                     self.send_header("Content-Length", str(len(html)))
@@ -408,7 +417,7 @@ server = ThreadingSimpleServer(('0.0.0.0', 8080), MyHttpRequestHandler)
 
 client.on_connect = on_connect
 client.on_message = on_message
-print("Connecting to MQTT")
+logging.info("Connecting to MQTT")
 client.connect(mqtt_address, mqtt_port)
 
 client.loop_start()

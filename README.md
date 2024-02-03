@@ -28,6 +28,7 @@ services:
             #- MQTT_PASSWORD=password
             # Used in reply to thermostat
             - API_SERVER_ADDRESS=10.0.1.22 # This should be the IP where a wifi client can access this container port 8080, NOT an internal docker IP
+            - LOG_LEVEL=DEBUG # DEBUG INFO
         restart: always
 ```
 ### Home Assistant Configuration

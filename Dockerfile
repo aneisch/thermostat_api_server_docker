@@ -21,6 +21,7 @@ ENV MQTT_SERVER 127.0.0.1
 ENV MQTT_PORT 1883
 ENV THERMOSTAT_SERIAL XXXXXXXXXX
 ENV THERMOSTAT_NAME Thermostat
+ENV LOG_LEVEL DEBUG
 
 COPY ./thermostat_api_server.py /usr/bin/thermostat_api_server.py
 
