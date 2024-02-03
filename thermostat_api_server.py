@@ -259,7 +259,8 @@ def on_message(client, userdata, message):
                 candidate_configuration["htsp"] = new_temperature.split(".")[0]
 
 class MyHttpRequestHandler(BaseHTTPRequestHandler):
-    protocol_version = 'HTTP/1.1'
+    def log_message(self, format, *args):
+        logging.info(f"{self.address_string()} -- {self.command} -- {self.path}")
 
     def send_no_changes(self):
         html = f'''<status version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/status"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><pingRate>0</pingRate><dealerConfigPingRate>0</dealerConfigPingRate><weatherPingRate>14400</weatherPingRate><equipEventsPingRate>60</equipEventsPingRate><historyPingRate>86400</historyPingRate><iduFaultsPingRate>86400</iduFaultsPingRate><iduStatusPingRate>86400</iduStatusPingRate><oduFaultsPingRate>86400</oduFaultsPingRate><oduStatusPingRate>0</oduStatusPingRate><configHasChanges>off</configHasChanges><dealerConfigHasChanges>off</dealerConfigHasChanges><dealerHasChanges>off</dealerHasChanges><oduConfigHasChanges>off</oduConfigHasChanges><iduConfigHasChanges>off</iduConfigHasChanges><utilityEventsHasChanges>off</utilityEventsHasChanges></status>'''
@@ -276,8 +277,6 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        html = ""
-
         if "/Alive" in self.path:
             html = "alive"
             self.send_response(200)
@@ -367,7 +366,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                 self.send_empty_200()
 
             elif "/status" in final_locator:
-                logging.debug(f"{current_configuration}")
+                logging.debug(f"Current Configuration: {current_configuration}")
                 current_configuration["last_communication"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
                 # Initialize candidate_configuration as current_configuration at first start
