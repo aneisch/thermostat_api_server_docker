@@ -316,7 +316,6 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         received_message = {}
 
         final_locator = f'/{self.path.split("/")[-1:][0]}' # eg /status
-        print(final_locator)
 
         if len(data) >= 45 and final_locator in paths:
             try: 
