@@ -259,6 +259,8 @@ def on_message(client, userdata, message):
                 candidate_configuration["htsp"] = new_temperature.split(".")[0]
 
 class MyHttpRequestHandler(BaseHTTPRequestHandler):
+    protocol_version = 'HTTP/1.1'
+
     def log_message(self, format, *args):
         logging.info(f"{self.address_string()} -- {self.command} -- {self.path}")
 
