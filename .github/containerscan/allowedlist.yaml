@@ -2,3 +2,4 @@ general:
   vulnerabilities:
     - CVE-2022-40897
     - CVE-2023-0286
+    - CVE-2023-52425
