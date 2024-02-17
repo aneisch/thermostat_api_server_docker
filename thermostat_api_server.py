@@ -68,8 +68,12 @@ climate_configuration_payload = {
     "uniq_id": thermostat_serial
 }
 
-def on_connect(client, userdata, flags, rc):
-    logging.info("Connected to MQTT")
+def on_connect(client, userdata, flags, reason_code, properties):
+    if reason_code == 0:
+        logging.info("Connected to MQTT")
+    else:
+        return 
+
     client.subscribe(f"{thermostat_command_topic}/#")
     logging.info(f'''Subscribed to {thermostat_command_topic}/#''')
 
@@ -411,7 +415,7 @@ class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
 
 client = mqttClient.Client(f"thermostat_api_server_{thermostat_serial}")
 if "mqtt_username" in locals():
-  client.username_pw_set(username=mqtt_username,password=mqtt_password)
+    client.username_pw_set(username=mqtt_username,password=mqtt_password)
 server = ThreadingSimpleServer(('0.0.0.0', 8080), MyHttpRequestHandler)
 
 client.on_connect = on_connect
