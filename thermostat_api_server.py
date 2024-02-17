@@ -413,7 +413,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
 class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
     pass
 
-client = mqttClient.Client(f"thermostat_api_server_{thermostat_serial}")
+client = mqttClient.Client(mqtt.CallbackAPIVersion.VERSION2, f"thermostat_api_server_{thermostat_serial}")
 if "mqtt_username" in locals():
     client.username_pw_set(username=mqtt_username,password=mqtt_password)
 server = ThreadingSimpleServer(('0.0.0.0', 8080), MyHttpRequestHandler)
