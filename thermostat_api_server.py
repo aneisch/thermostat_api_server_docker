@@ -362,6 +362,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                 self.send_empty_200()
 
             elif "/equipment_events" in final_locator:
+                # Fix for some newer firmware versions
                 if "active" in received_message and received_message['active'] == "on":
                     state = f"{received_message['localtime'][1:]}: {received_message['description']}"
                 else:
