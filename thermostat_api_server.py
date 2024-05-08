@@ -41,7 +41,7 @@ thermostat_command_topic = f"homeassistant/climate/{thermostat_name}/cmnd"
 thermostat_state_topic = f"homeassistant/climate/{thermostat_name}/state"
 thermostat_serial = os.environ['THERMOSTAT_SERIAL']
 
-device = {"mdl": "TSTAT0201CW", "mf": "Observer", "ids": thermostat_serial, "name": thermostat_name}
+device = {"mdl": "TSTAT0201CW", "sw": None, "mf": "Observer", "ids": thermostat_serial, "name": thermostat_name}
 
 climate_configuration_payload = {
     "act_t": thermostat_state_topic,
@@ -325,7 +325,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         html = ""
         match = False
         monitored = ["rt","rh","mode","fan","coolicon","heaticon","fanicon","hold","filtrlvl","clsp","htsp","opstat","iducfm","oat","oducoiltmp"]
-        paths = ["/status", "/odu_status","/equipment_events"] # we only need data from these paths
+        paths = ["/status", "/odu_status","/equipment_events", "/profile"] # we only need data from these paths
         received_message = {}
         final_locator = f'/{self.path.split("/")[-1:][0]}' # eg /status
         logging.debug(f"{final_locator} -- {data}")
@@ -368,6 +368,16 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                 else:
                     state = "No Active Event"
                 current_configuration["latest_equip"] = state
+                self.send_empty_200()
+
+            elif "/profile" in final_locator:
+                # Attempt to grab FW version and update climate device
+                try:
+                    if climate_configuration_payload["device"]["sw"] != received_message['firmware']:
+                        climate_configuration_payload["device"]["sw"] = f"{received_message['firmware']}"
+                        client.publish(f'homeassistant/climate/{thermostat_serial}-climate/config', json.dumps(climate_configuration_payload), retain=True)
+                except:
+                    pass
                 self.send_empty_200()
 
             elif "/status" in final_locator:
