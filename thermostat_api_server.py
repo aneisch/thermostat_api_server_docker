@@ -41,7 +41,7 @@ thermostat_command_topic = f"homeassistant/climate/{thermostat_name}/cmnd"
 thermostat_state_topic = f"homeassistant/climate/{thermostat_name}/state"
 thermostat_serial = os.environ['THERMOSTAT_SERIAL']
 
-device = {"mdl": "TSTAT0201CW", "sw": None, "mf": "Observer", "ids": thermostat_serial, "name": thermostat_name}
+device = {"mdl": "TSTAT0201CW", "sw": "Unknown", "mf": "Observer", "ids": thermostat_serial, "name": thermostat_name}
 
 climate_configuration_payload = {
     "act_t": thermostat_state_topic,
