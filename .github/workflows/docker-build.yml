@@ -23,11 +23,17 @@ jobs:
       - name: Attempt Build
         run: docker build . --file Dockerfile -t $IMAGE_NAME
         
-      - name: Assess Vulnerability
-        uses: Azure/container-scan@v0
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-name: ${{ env.IMAGE_NAME }}
-          run-quality-checks: false
+          image-ref: '$IMAGE_NAME'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
 
       - name: Log into Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -48,7 +54,7 @@ jobs:
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
 
-  build_assess_push_multiarch:
+  build_multiarch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
