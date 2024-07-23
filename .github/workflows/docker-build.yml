@@ -52,15 +52,12 @@ jobs:
         with:
           push: true
           tags: ghcr.io/aneisch/${{ env.IMAGE_NAME }}:latest
-
-      - name: Sign the container image
-        run: cosign sign ghcr.io/${{ github.repository }}@${{ steps.push-step.outputs.digest }}
           
       - name: Install cosign
         uses: sigstore/cosign-installer@main
 
       - name: Sign the container image
-        run: cosign sign --yes ghcr.io/${{ github.repository }}@${{ steps.push-step.outputs.digest }}
+        run: cosign sign --yes ghcr.io/aneisch/${{ env.IMAGE_NAME }}@${{ steps.push-step.outputs.digest }}
 
   build_multiarch:
     runs-on: ubuntu-latest
