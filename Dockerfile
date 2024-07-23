@@ -27,7 +27,6 @@ RUN apk add --no-cache --update curl && \
   pip cache purge && \ 
   pip uninstall -y wheel setuptools pip && \ 
   adduser -D thermostat_api && \
-  apk list -I && \
   apk --purge del apk-tools
 
 USER thermostat_api
