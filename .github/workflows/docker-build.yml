@@ -46,21 +46,21 @@ jobs:
       - name: Log into Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Push Image
-        run: |
-          IMAGE_ID=ghcr.io/aneisch/${{ env.IMAGE_NAME }}
-          # Change all uppercase to lowercase
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          # Strip git ref prefix from version
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          # Strip "v" prefix from tag name
-          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-          # Use Docker `latest` tag convention
-          [ "$VERSION" == "master" ] && VERSION=latest
-          echo IMAGE_ID=$IMAGE_ID
-          echo VERSION=$VERSION
-          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
-          docker push $IMAGE_ID:$VERSION
+      - name: Build and push container image
+        id: push-step
+        uses: docker/build-push-action@master
+        with:
+          push: true
+          tags: ghcr.io/aneisch/${{ env.IMAGE_NAME }}:latest
+
+      - name: Sign the container image
+        run: cosign sign ghcr.io/${{ github.repository }}@${{ steps.push-step.outputs.digest }}
+          
+      - name: Install cosign
+        uses: sigstore/cosign-installer@main
+
+      - name: Sign the container image
+        run: cosign sign --yes ghcr.io/${{ github.repository }}@${{ steps.push-step.outputs.digest }}
 
   build_multiarch:
     runs-on: ubuntu-latest
