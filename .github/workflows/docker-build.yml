@@ -57,6 +57,8 @@ jobs:
         uses: sigstore/cosign-installer@main
 
       - name: Sign the container image
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: cosign sign --yes ghcr.io/aneisch/${{ env.IMAGE_NAME }}@${{ steps.push-step.outputs.digest }}
 
   Multiarch:
@@ -83,6 +85,7 @@ jobs:
       
       - name: Build and push
         uses: docker/build-push-action@master
+        id: push-step
         with:
           context: .
           file: ./Dockerfile
@@ -96,4 +99,6 @@ jobs:
         uses: sigstore/cosign-installer@main
 
       - name: Sign the container image
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: cosign sign --yes ghcr.io/aneisch/${{ env.IMAGE_NAME }}@${{ steps.push-step.outputs.digest }}
