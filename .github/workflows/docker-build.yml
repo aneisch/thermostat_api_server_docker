@@ -53,19 +53,19 @@ jobs:
           push: true
           tags: ghcr.io/aneisch/${{ env.IMAGE_NAME }}:latest
           
-      - name: Install cosign
-        uses: sigstore/cosign-installer@main
+      # - name: Install cosign
+      #   uses: sigstore/cosign-installer@main
 
-      - name: Write signing key to disk
-        run: 'echo "$KEY" > cosign.key'
-        shell: bash
-        env:
-          KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      # - name: Write signing key to disk
+      #   run: 'echo "$KEY" > cosign.key'
+      #   shell: bash
+      #   env:
+      #     KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
 
-      - name: Sign the container image
-        env:
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: cosign sign --yes --key cosign.key ghcr.io/aneisch/${{ env.IMAGE_NAME }}@${{ steps.push-step.outputs.digest }}
+      # - name: Sign the container image
+      #   env:
+      #     COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+      #   run: cosign sign --yes --key cosign.key ghcr.io/aneisch/${{ env.IMAGE_NAME }}@${{ steps.push-step.outputs.digest }}
 
   Multiarch:
     runs-on: ubuntu-latest
@@ -101,16 +101,16 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
 
-      - name: Write signing key to disk
-        run: 'echo "$KEY" > cosign.key'
-        shell: bash
-        env:
-          KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      # - name: Write signing key to disk
+      #   run: 'echo "$KEY" > cosign.key'
+      #   shell: bash
+      #   env:
+      #     KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           
-      - name: Install cosign
-        uses: sigstore/cosign-installer@main
+      # - name: Install cosign
+      #   uses: sigstore/cosign-installer@main
 
-      - name: Sign the container image
-        env:
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: cosign sign --yes --key cosign.key ghcr.io/aneisch/${{ env.IMAGE_NAME }}@${{ steps.push-step.outputs.digest }}
+      # - name: Sign the container image
+      #   env:
+      #     COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+      #   run: cosign sign --yes --key cosign.key ghcr.io/aneisch/${{ env.IMAGE_NAME }}@${{ steps.push-step.outputs.digest }}
