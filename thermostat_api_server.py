@@ -228,7 +228,8 @@ def on_connect(client, userdata, flags, reason_code, properties):
         "val_tpl": "{{ value_json.last_communication }}",
         "name": f"{thermostat_name} Last Communication",
         "ic": "mdi:clock",
-        "uniq_id": f"{thermostat_serial}-last-time"
+        "uniq_id": f"{thermostat_serial}-last-time",
+        "device_class": "timestamp"
     }
     client.publish(f'homeassistant/sensor/{thermostat_serial}-last-time/config', json.dumps(last_time_sensor_configuration_payload), retain=True)
 
