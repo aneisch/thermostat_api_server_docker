@@ -94,6 +94,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
         "stat_t": thermostat_state_topic,
         "name": f"{thermostat_name} Temperature",
         "unit_of_meas": "°F",
+        "device_class": "temperature",
         "ic": "mdi:thermometer",
         "val_tpl": "{{ value_json.rt }}",
         "uniq_id": f"{thermostat_serial}-temp"
@@ -105,6 +106,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
         "stat_t": thermostat_state_topic,
         "name": f"{thermostat_name} Humidity",
         "unit_of_meas": "%",
+        "device_class": "humidity",
         "ic": "mdi:water-percent",
         "val_tpl": "{{ value_json.rh }}",
         "uniq_id": f"{thermostat_serial}-humidity"
@@ -148,7 +150,8 @@ def on_connect(client, userdata, flags, reason_code, properties):
         "ic": "mdi:thermometer",
         "val_tpl": "{% if value_json.mode == 'cool' %}{{ value_json.clsp }}{% elif value_json.mode == 'heat' %}{{ value_json.htsp }}{% endif %}",
         "uniq_id": f"{thermostat_serial}-setpoint",
-        "unit_of_meas": "°F"
+        "unit_of_meas": "°F",
+        "device_class": "temperature"
     }
     client.publish(f'homeassistant/sensor/{thermostat_serial}-setpoint/config', json.dumps(setpoint_sensor_configuration_payload), retain=True)
 
@@ -180,6 +183,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
         "val_tpl": "{{ value_json.filtrlvl }}",
         "uniq_id": f"{thermostat_serial}-filtrlvl",
         "unit_of_meas": "h",
+        "device_class": "duration"
     }
     client.publish(f'homeassistant/sensor/{thermostat_serial}-filtrlvl/config', json.dumps(filtrlvl_sensor_configuration_payload), retain=True)
 
@@ -190,7 +194,8 @@ def on_connect(client, userdata, flags, reason_code, properties):
         "ic": "mdi:hvac",
         "val_tpl": "{{ value_json.oducoiltmp }}",
         "uniq_id": f"{thermostat_serial}-oducoiltmp",
-        "unit_of_meas": "°F"
+        "unit_of_meas": "°F",
+        "device_class": "temperature"
     }
     client.publish(f'homeassistant/sensor/{thermostat_serial}-oducoiltmp/config', json.dumps(oducoiltmp_sensor_configuration_payload), retain=True)
 
@@ -201,7 +206,8 @@ def on_connect(client, userdata, flags, reason_code, properties):
         "ic": "mdi:thermometer",
         "val_tpl": "{{ value_json.oat }}",
         "uniq_id": f"{thermostat_serial}-oat",
-        "unit_of_meas": "°F"
+        "unit_of_meas": "°F",
+        "device_class": "temperature"
     }
     client.publish(f'homeassistant/sensor/{thermostat_serial}-oat/config', json.dumps(oat_sensor_configuration_payload), retain=True)
 
