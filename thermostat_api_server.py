@@ -22,7 +22,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Allow faster script restart
+# Allow faster script restarting
 socketserver.TCPServer.allow_reuse_address = True
 
 candidate_configuration = {"hold": "on", "fan": "auto"}
