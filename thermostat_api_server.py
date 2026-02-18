@@ -121,7 +121,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
         "val_tpl": "{{ value_json.mode }}",
         "uniq_id": f"{thermostat_serial}-mode"
     }
-    client.publish(f'homeassistant/sensor/{thermostat_serial}-modee/config', json.dumps(mode_sensor_configuration_payload), retain=True)
+    client.publish(f'homeassistant/sensor/{thermostat_serial}-mode/config', json.dumps(mode_sensor_configuration_payload), retain=True)
 
     fan_mode_sensor_configuration_payload = {
         "device": device,
@@ -282,11 +282,16 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.send_header("Content-Type", "application/xml; charset=utf-8")
         self.end_headers()
-        self.wfile.write(bytes(html, "utf8"))
+        try:
+            self.wfile.write(bytes(html, "utf8"))
+            self.wfile.flush()
+        except BrokenPipeError:
+            self.log_error("Client closed connection before response was sent")
 
     def send_empty_200(self):
         self.send_response(200)
         self.send_header("Content-Length", "0")
+        self.send_header("Connection", "keep-alive")
         self.end_headers()
 
     def do_GET(self):
@@ -294,6 +299,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
             html = "alive"
             self.send_response(200)
             self.send_header("Content-Length", "5")
+            self.send_header("Connection", "keep-alive")
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.end_headers()
             self.wfile.write(bytes(html, "utf8"))
@@ -303,6 +309,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
             html = f'''<time version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/time/"/><utc>{time}</utc></time>'''
             self.send_response(200)
             self.send_header("Content-Length", len(html))
+            self.send_header("Connection", "keep-alive")
             self.send_header("Content-Type", "application/xml; charset=utf-8")
             self.end_headers()
             self.wfile.write(bytes(html, "utf8"))
@@ -314,6 +321,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
             html = f'''<config version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/config"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><atom:link rel="http://{api_server_address}/rels/dealer_config" href="http://{api_server_address}/systems/{thermostat_serial}/dealer_config"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><mode>{candidate_configuration["mode"]}</mode><fan>{candidate_configuration["fan"]}</fan><blight>10</blight><timeFormat>12</timeFormat><dst>on</dst><volume>high</volume><soundType>click</soundType><scrLockout>off</scrLockout><scrLockoutCode>0000</scrLockoutCode><humSetpoint>45</humSetpoint><dehumSetpoint>45</dehumSetpoint><utilityEvent/><zones><zone id="1"><name>Zone 1</name><hold>{candidate_configuration["hold"]}</hold><otmr/><htsp>{candidate_configuration["htsp"]}</htsp><clsp>{candidate_configuration["clsp"]}</clsp><program></program></zone></zones></config>'''
             self.send_response(200)
             self.send_header("Content-Length", len(html))
+            self.send_header("Connection", "keep-alive")
             self.send_header("Content-Type", "application/xml; charset=utf-8")
             self.end_headers()
             self.wfile.write(bytes(html, "utf8"))
@@ -356,7 +364,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                 if "/status" in self.path:
                     self.send_no_changes()
                 else:
-                    self.send_empty_200
+                    self.send_empty_200()
                 return
 
             # Build current_configuration with monitored variables
@@ -409,6 +417,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                     html = f'''<status version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/status"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><pingRate>0</pingRate><dealerConfigPingRate>0</dealerConfigPingRate><weatherPingRate>14400</weatherPingRate><equipEventsPingRate>60</equipEventsPingRate><historyPingRate>86400</historyPingRate><iduFaultsPingRate>86400</iduFaultsPingRate><iduStatusPingRate>86400</iduStatusPingRate><oduFaultsPingRate>86400</oduFaultsPingRate><oduStatusPingRate>0</oduStatusPingRate><configHasChanges>on</configHasChanges><dealerConfigHasChanges>off</dealerConfigHasChanges><dealerHasChanges>off</dealerHasChanges><oduConfigHasChanges>off</oduConfigHasChanges><iduConfigHasChanges>off</iduConfigHasChanges><utilityEventsHasChanges>off</utilityEventsHasChanges></status>'''
                     self.send_response(200)
                     self.send_header("Content-Length", str(len(html)))
+                    self.send_header("Connection", "keep-alive")
                     self.send_header("Content-Type", "application/xml; charset=utf-8")
                     self.end_headers()
                     self.wfile.write(bytes(html, "utf8"))
