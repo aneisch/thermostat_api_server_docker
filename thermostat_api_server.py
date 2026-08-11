@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 socketserver.TCPServer.allow_reuse_address = True
 
 candidate_configuration = {"hold": "on", "fan": "auto"}
-current_configuration = {}
+current_configuration = {"changes_pending": "OFF"}
 changes_pending = False
 first_start = True
 
@@ -78,6 +78,17 @@ def on_connect(client, userdata, flags, reason_code, properties):
     logging.info(f'''Subscribed to {thermostat_command_topic}/#''')
 
     client.publish(f'homeassistant/climate/{thermostat_serial}-climate/config', json.dumps(climate_configuration_payload), retain=True)
+
+    changes_pending_sensor_payload = {
+        "device": device,
+        "stat_t": thermostat_state_topic,
+        "name": f"{thermostat_name} Changes Pending",
+        "ic": "mdi:sync",
+        "val_tpl": "{{ value_json.changes_pending }}",
+        "uniq_id": f"{thermostat_serial}-changes-pending",
+        "device_class": "update"
+    }
+    client.publish(f'homeassistant/binary_sensor/{thermostat_serial}-changes-pending/config', json.dumps(changes_pending_sensor_payload), retain=True)
 
     latest_equipment_event_payload = {
         "device": device,
@@ -238,6 +249,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
 def on_message(client, userdata, message):
     global changes_pending
     global candidate_configuration
+    global current_configuration
     message.payload = message.payload.decode("utf-8")
     logging.info(f'''New message: {message.topic} {message.payload}''')
 
@@ -269,6 +281,10 @@ def on_message(client, userdata, message):
                 changes_pending = True
                 candidate_configuration["htsp"] = new_temperature.split(".")[0]
 
+    if changes_pending:
+        current_configuration["changes_pending"] = "ON"
+        client.publish(thermostat_state_topic, str(current_configuration).replace("'", '"').replace("None", '""'), retain=True)
+
 class MyHttpRequestHandler(BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
 
@@ -276,7 +292,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         logging.info(f"{self.address_string()} -- {self.command} -- {self.path}")
 
     def send_no_changes(self):
-        html = f'''<status version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/status"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><pingRate>0</pingRate><dealerConfigPingRate>0</dealerConfigPingRate><weatherPingRate>14400</weatherPingRate><equipEventsPingRate>60</equipEventsPingRate><historyPingRate>86400</historyPingRate><iduFaultsPingRate>86400</iduFaultsPingRate><iduStatusPingRate>86400</iduStatusPingRate><oduFaultsPingRate>86400</oduFaultsPingRate><oduStatusPingRate>0</oduStatusPingRate><configHasChanges>off</configHasChanges><dealerConfigHasChanges>off</dealerConfigHasChanges><dealerHasChanges>off</dealerHasChanges><oduConfigHasChanges>off</oduConfigHasChanges><iduConfigHasChanges>off</iduConfigHasChanges><utilityEventsHasChanges>off</utilityEventsHasChanges></status>'''
+        html = f'''<status version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/status"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><pingRate>0</pingRate><dealerConfigPingRate>0</dealerConfigPingRate><weatherPingRate>14400</weatherPingRate><equipEventsPingRate>60</equipEventsPingRate><historyPingRate>86400</historyPingRate><iduFaultsPingRate>86400</iduFaultsPingRate><iduStatusPingRate>86400</iduStatusPingRate><oduFaultsPingRate>86400</oduFaultsPingRate><oduStatusPingRate>0</oduStatusPingRate><configHasChanges>off</configHasChanges><dealerConfigHasChanges>off</dealerHasChanges><dealerHasChanges>off</dealerHasChanges><oduConfigHasChanges>off</oduConfigHasChanges><iduConfigHasChanges>off</iduConfigHasChanges><utilityEventsHasChanges>off</utilityEventsHasChanges></status>'''
         self.send_response(200)
         self.send_header("Content-Length", str(len(html)))
         self.send_header("Connection", "keep-alive")
@@ -316,7 +332,9 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
 
         elif "/config" in self.path:
             global changes_pending
+            global current_configuration
             changes_pending = False
+            current_configuration["changes_pending"] = "OFF"
             logging.info(f'''New configuration: {candidate_configuration}''')
             html = f'''<config version="1.9" xmlns:atom="http://www.w3.org/2005/Atom"><atom:link rel="self" href="http://{api_server_address}/systems/{thermostat_serial}/config"/><atom:link rel="http://{api_server_address}/rels/system" href="http://{api_server_address}/systems/{thermostat_serial}"/><atom:link rel="http://{api_server_address}/rels/dealer_config" href="http://{api_server_address}/systems/{thermostat_serial}/dealer_config"/><timestamp>{datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")}</timestamp><mode>{candidate_configuration["mode"]}</mode><fan>{candidate_configuration["fan"]}</fan><blight>10</blight><timeFormat>12</timeFormat><dst>on</dst><volume>high</volume><soundType>click</soundType><scrLockout>off</scrLockout><scrLockoutCode>0000</scrLockoutCode><humSetpoint>45</humSetpoint><dehumSetpoint>45</dehumSetpoint><utilityEvent/><zones><zone id="1"><name>Zone 1</name><hold>{candidate_configuration["hold"]}</hold><otmr/><htsp>{candidate_configuration["htsp"]}</htsp><clsp>{candidate_configuration["clsp"]}</clsp><program></program></zone></zones></config>'''
             self.send_response(200)
@@ -325,6 +343,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/xml; charset=utf-8")
             self.end_headers()
             self.wfile.write(bytes(html, "utf8"))
+            client.publish(thermostat_state_topic, str(current_configuration).replace("'", '"').replace("None", '""'), retain=True)
 
         else:
             # Send 0 length 200 response
