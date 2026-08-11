@@ -22,6 +22,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 # Allow faster script restart
 socketserver.TCPServer.allow_reuse_address = True
 
