@@ -30,6 +30,10 @@ candidate_configuration = {"hold": "on", "fan": "auto"}
 current_configuration = {"changes_pending": "OFF"}
 changes_pending = False
 first_start = True
+# Last real non-off mode the device reported, used to restore mode on power-on
+# instead of relying on Home Assistant's default turn_on behavior (which always
+# picks heat over cool when both are available).
+last_active_mode = "cool"
 
 api_server_address = os.environ['API_SERVER_ADDRESS']
 mqtt_address = os.environ['MQTT_SERVER']
@@ -61,6 +65,7 @@ climate_configuration_payload = {
     "mode_stat_tpl": "{{ value_json.mode }}",
     "modes": ["off", "cool", "heat"],
     "name": thermostat_name,
+    "power_command_topic": thermostat_command_topic + "/power",
     "temp_cmd_t": thermostat_command_topic + "/temperature",
     "temp_stat_t": thermostat_state_topic,
     "temp_stat_tpl": "{% if value_json.mode == 'cool' %}{{ value_json.clsp }}{% elif value_json.mode == 'heat' %}{{ value_json.htsp }}{% endif %}",
@@ -251,6 +256,7 @@ def on_message(client, userdata, message):
     global changes_pending
     global candidate_configuration
     global current_configuration
+    global last_active_mode
     message.payload = message.payload.decode("utf-8")
     logging.info(f'''New message: {message.topic} {message.payload}''')
 
@@ -258,6 +264,20 @@ def on_message(client, userdata, message):
         new_operating_mode = message.payload
         changes_pending = True
         candidate_configuration["mode"] = new_operating_mode
+        if new_operating_mode in ("cool", "heat"):
+            last_active_mode = new_operating_mode
+
+    elif message.topic == f"{thermostat_command_topic}/power":
+        # Separate power on/off command (pow_cmd_t) so Home Assistant's turn_on
+        # doesn't have to guess a mode. HA's default ClimateEntity turn_on always
+        # picks heat before cool when both are supported, ignoring what mode the
+        # thermostat was actually last running -- this restores the real one.
+        changes_pending = True
+        if message.payload == "ON":
+            candidate_configuration["mode"] = last_active_mode
+            logging.info(f"Power ON -- restoring last active mode: {last_active_mode}")
+        elif message.payload == "OFF":
+            candidate_configuration["mode"] = "off"
 
     elif message.topic == f"{thermostat_command_topic}/fan_mode":
         new_fan_mode = message.payload
@@ -270,17 +290,38 @@ def on_message(client, userdata, message):
         candidate_configuration["hold"] = new_hold_mode
 
     elif message.topic == f"{thermostat_command_topic}/temperature":
-        new_temperature = message.payload
+        new_temperature = message.payload.split(".")[0]
+        
+        # Determine active mode (fall back to current_configuration if not set in candidate)
+        active_mode = candidate_configuration.get('mode', current_configuration.get('mode'))
 
-        if 'clsp' in candidate_configuration:
-            if candidate_configuration['mode'] == "cool" and new_temperature != candidate_configuration['clsp']:
+        if active_mode == "cool":
+            if candidate_configuration.get("clsp") != new_temperature:
                 changes_pending = True
-                candidate_configuration["clsp"] = new_temperature.split(".")[0]
+                candidate_configuration["clsp"] = new_temperature
+                logging.info(f"Updated cooling setpoint (clsp) to {new_temperature}°F")
+                
+                # Ensure htsp is at least 2 degrees below clsp
+                htsp_val = int(candidate_configuration.get("htsp", current_configuration.get("htsp", 0)))
+                max_allowed_htsp = int(new_temperature) - 2
+                
+                if htsp_val > max_allowed_htsp:
+                    candidate_configuration["htsp"] = str(max_allowed_htsp)
+                    logging.info(f"Clamped heating setpoint (htsp) down to {max_allowed_htsp}°F to maintain 2°F deadband gap")
 
-        if 'htsp' in candidate_configuration:
-            if candidate_configuration['mode'] == "heat" and new_temperature != candidate_configuration['htsp']:
+        elif active_mode == "heat":
+            if candidate_configuration.get("htsp") != new_temperature:
                 changes_pending = True
-                candidate_configuration["htsp"] = new_temperature.split(".")[0]
+                candidate_configuration["htsp"] = new_temperature
+                logging.info(f"Updated heating setpoint (htsp) to {new_temperature}°F")
+                
+                # Ensure clsp is at least 2 degrees above htsp
+                clsp_val = int(candidate_configuration.get("clsp", current_configuration.get("clsp", 100)))
+                min_required_clsp = int(new_temperature) + 2
+                
+                if clsp_val < min_required_clsp:
+                    candidate_configuration["clsp"] = str(min_required_clsp)
+                    logging.info(f"Adjusted cooling setpoint (clsp) up to {min_required_clsp}°F to maintain 2°F deadband gap")
 
     if changes_pending:
         current_configuration["changes_pending"] = "ON"
@@ -356,6 +397,7 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
         global current_configuration
         global candidate_configuration
         global first_start
+        global last_active_mode
 
         html = ""
         match = False
@@ -392,6 +434,9 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                 if option in received_message:
                     current_configuration[option] = received_message[option]
 
+            if current_configuration.get("mode") in ("cool", "heat"):
+                last_active_mode = current_configuration["mode"]
+
             # We don't need any kind of response for this path
             if "/odu_status" in final_locator:
                 self.send_empty_200()
@@ -419,11 +464,16 @@ class MyHttpRequestHandler(BaseHTTPRequestHandler):
                 logging.debug(f"Current Configuration: {current_configuration}")
                 current_configuration["last_communication"] = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
-                # Initialize candidate_configuration as current_configuration at first start
+                # Initialize candidate_configuration as current_configuration at first start.
+                # Use setdefault, not a blind overwrite: a command (e.g. a power on/off) can
+                # arrive after container start but before the device's first status check-in,
+                # and would otherwise be silently clobbered here once that first status lands.
                 if first_start == True:
-                    candidate_configuration['clsp'] = current_configuration['clsp']
-                    candidate_configuration['htsp'] = current_configuration['htsp']
-                    candidate_configuration['mode'] = current_configuration['mode']
+                    candidate_configuration.setdefault('clsp', current_configuration['clsp'])
+                    candidate_configuration.setdefault('htsp', current_configuration['htsp'])
+                    candidate_configuration.setdefault('mode', current_configuration['mode'])
+                    if current_configuration['mode'] in ("cool", "heat"):
+                        last_active_mode = current_configuration['mode']
 
                     # Update climate device with client IP
                     climate_configuration_payload["device"]["cns"] = [["ip", self.client_address[0]]]
